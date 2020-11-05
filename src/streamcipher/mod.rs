@@ -212,17 +212,16 @@ macro_rules! impl_stream_cipher {
 #[bench]
 fn bench_rc4(b: &mut test::Bencher) {
     let key = hex::decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f").unwrap();
-
+    let mut ciphertext = test::black_box([
+        0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 
+        0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+    ]);
+    
     let mut cipher = Rc4::new(&key);
-
+    
     b.bytes = 16;
     b.iter(|| {
-        let mut ciphertext = test::black_box([
-            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 
-            0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
-        ]);
         cipher.encrypt_slice(&mut ciphertext);
-        ciphertext
     })
 }
 
@@ -240,16 +239,13 @@ fn bench_chacha20(b: &mut test::Bencher) {
         0x00, 0x00, 0x00, 0x00
     ];
 
-    let plaintext = [1u8; Chacha20::BLOCK_LEN];
-    let mut plaintext_and_ciphertext = plaintext.clone();
+    let mut plaintext_and_ciphertext = test::black_box([1u8; Chacha20::BLOCK_LEN]);
     
     let chacha20 = Chacha20::new(&key);
     
     b.bytes = Chacha20::BLOCK_LEN as u64;
     b.iter(|| {
         chacha20.encrypt_slice(1, &nonce, &mut plaintext_and_ciphertext);
-
-        plaintext_and_ciphertext
     })
 }
 

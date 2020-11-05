@@ -34,8 +34,6 @@ pub fn and_si128_inplace(a: &mut [u8], b: &[u8]) {
 
 #[cfg(target_arch = "aarch64")]
 pub fn and_si128_inplace(a: &mut [u8], b: &[u8]) {
-    use core::mem::transmute;
-
     unsafe {
         let c: *mut uint8x16_t = a.as_mut_ptr() as *mut uint8x16_t;
         let d: uint8x16_t = *(b.as_ptr() as *const uint8x16_t);

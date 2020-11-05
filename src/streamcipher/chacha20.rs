@@ -1,5 +1,33 @@
 use crate::mem::Zeroize;
-use crate::util::xor_si128_inplace;
+// use crate::util::xor_si128_inplace;
+
+
+#[inline]
+fn add_si512_inplace(a: &mut [u32; Chacha20::STATE_LEN], b: &[u32; Chacha20::STATE_LEN]) {
+    for i in 0..Chacha20::STATE_LEN {
+        a[i] = a[i].wrapping_add(b[i]);
+    }
+}
+
+#[inline]
+fn xor_si512_inplace(a: &mut [u8], b: &[u32; Chacha20::STATE_LEN]) {
+    // NOTE: 看起来编译器会对这种单独的函数做优化，我们不再需要手动写 AVX2/AVX512 的代码咯。
+    use core::slice;
+    
+    unsafe {
+        let d1 = slice::from_raw_parts_mut(a.as_mut_ptr() as *mut u32, Chacha20::STATE_LEN);
+        for i in 0..Chacha20::STATE_LEN {
+            d1[i] ^= b[i];
+        }
+    }
+}
+
+#[inline]
+fn v512_i8_xor_inplace(a: &mut [u8], b: &[u8]) {
+    for i in 0..64 {
+        a[i] ^= b[i];
+    }
+}
 
 
 /// ChaCha20 for IETF Protocols
@@ -70,22 +98,6 @@ impl Chacha20 {
     }
 
     #[inline]
-    fn ctr32(initial_state: &mut [u32; Self::STATE_LEN]) {
-        // Update Block Counter
-        initial_state[12] = initial_state[12].wrapping_add(1);
-    }
-
-    #[inline]
-    fn core(&self, initial_state: &mut [u32; Self::STATE_LEN], state: &mut [u32; Self::STATE_LEN]) {
-        // 20 rounds (diagonal rounds)
-        diagonal_rounds(state);
-
-        for i in 0..16 {
-            state[i] = state[i].wrapping_add(initial_state[i]);
-        }
-    }
-
-    #[inline]
     fn in_place(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], plaintext_or_ciphertext: &mut [u8]) {
         debug_assert_eq!(nonce.len(), Self::NONCE_LEN);
 
@@ -93,22 +105,40 @@ impl Chacha20 {
 
         // Counter (32-bits, little-endian)
         initial_state[12] = init_block_counter;
-        // Nonce (96-bits, little-endian)
-        initial_state[13] = u32::from_le_bytes([nonce[ 0], nonce[ 1], nonce[ 2], nonce[ 3]]);
-        initial_state[14] = u32::from_le_bytes([nonce[ 4], nonce[ 5], nonce[ 6], nonce[ 7]]);
-        initial_state[15] = u32::from_le_bytes([nonce[ 8], nonce[ 9], nonce[10], nonce[11]]);
 
+        // Nonce (96-bits, little-endian)
+        if cfg!(target_endian = "little") {
+            unsafe {
+                use core::mem::transmute;
+
+                let data: &[u32; 3] = transmute(nonce);
+                initial_state[13..16].copy_from_slice(data);
+            }
+        } else {
+            initial_state[13] = u32::from_le_bytes([nonce[ 0], nonce[ 1], nonce[ 2], nonce[ 3]]);
+            initial_state[14] = u32::from_le_bytes([nonce[ 4], nonce[ 5], nonce[ 6], nonce[ 7]]);
+            initial_state[15] = u32::from_le_bytes([nonce[ 8], nonce[ 9], nonce[10], nonce[11]]);
+        }
+        
         let mut chunks = plaintext_or_ciphertext.chunks_exact_mut(Self::BLOCK_LEN);
         for plaintext in &mut chunks {
             let mut state = initial_state.clone();
-            self.core(&mut initial_state, &mut state);
 
-            let mut keystream = [0u8; Self::BLOCK_LEN];
-            state_to_keystream(&state, &mut keystream);
-            
-            xor_si128_inplace(plaintext, &keystream);
-            
-            Self::ctr32(&mut initial_state);
+            // 20 rounds (diagonal rounds)
+            diagonal_rounds(&mut state);
+            add_si512_inplace(&mut state, &mut initial_state);
+
+            // Update Block Counter
+            initial_state[12] = initial_state[12].wrapping_add(1);
+
+            if cfg!(target_endian = "little") {
+                xor_si512_inplace(plaintext, &state);
+            } else {
+                let mut keystream = [0u8; Self::BLOCK_LEN];
+                state_to_keystream(&state, &mut keystream);
+
+                v512_i8_xor_inplace(plaintext, &keystream)
+            }
         }
 
         let rem = chunks.into_remainder();
@@ -117,25 +147,42 @@ impl Chacha20 {
         if rlen > 0 {
             // Last Block
             let mut state = initial_state.clone();
-            self.core(&mut initial_state, &mut state);
 
-            let mut keystream = [0u8; Self::BLOCK_LEN];
-            state_to_keystream(&state, &mut keystream);
+            // 20 rounds (diagonal rounds)
+            diagonal_rounds(&mut state);
+            add_si512_inplace(&mut state, &mut initial_state);
 
-            for i in 0..rlen {
-                rem[i] ^= keystream[i];
+            // Update Block Counter
+            // initial_state[12] = initial_state[12].wrapping_add(1);
+            
+            if cfg!(target_endian = "little") {
+                unsafe {
+                    use core::slice;
+                    
+                    let keystream = slice::from_raw_parts(state.as_ptr() as *const u8, Self::BLOCK_LEN);
+                    for i in 0..rlen {
+                        rem[i] ^= keystream[i];
+                    }
+                }
+            } else {
+                let mut keystream = [0u8; Self::BLOCK_LEN];
+                state_to_keystream(&state, &mut keystream);
+
+                for i in 0..rlen {
+                    rem[i] ^= keystream[i];
+                }
             }
-
-            Self::ctr32(&mut initial_state);
         }
     }
 
     /// Nonce (96-bits, little-endian)
+    #[inline]
     pub fn encrypt_slice(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], plaintext_in_ciphertext_out: &mut [u8]) {
         self.in_place(init_block_counter, nonce, plaintext_in_ciphertext_out)
     }
 
     /// Nonce (96-bits, little-endian)
+    #[inline]
     pub fn decrypt_slice(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], ciphertext_in_plaintext_and: &mut [u8]) {
         self.in_place(init_block_counter, nonce, ciphertext_in_plaintext_and)
     }

@@ -34,19 +34,19 @@ impl Chacha20Poly1305 {
     pub const BLOCK_LEN: usize = Chacha20::BLOCK_LEN; // 64 bytes
     pub const NONCE_LEN: usize = Chacha20::NONCE_LEN; // 12 bytes
     pub const TAG_LEN: usize   = Poly1305::TAG_LEN;   // 16 bytes
-
+    
     #[cfg(target_pointer_width = "64")]
-    pub const A_MAX: usize = u64::MAX as usize; // 2^64 - 1
+    pub const A_MAX: usize = u64::MAX as usize;           // 2^64 - 1
     #[cfg(target_pointer_width = "32")]
-    pub const A_MAX: usize = usize::MAX;        // 2^32 - 1
+    pub const A_MAX: usize = usize::MAX;                  // 2^32 - 1
     pub const P_MAX: usize = 274877906880;                // (2^32 - 1) * BLOCK_LEN
     pub const C_MAX: usize = Self::P_MAX + Self::TAG_LEN; // 274,877,906,896
     pub const N_MIN: usize = Self::NONCE_LEN;
     pub const N_MAX: usize = Self::NONCE_LEN;
-
+    
     const PADDING_BLOCK: [u8; Poly1305::BLOCK_LEN] = [0u8; Poly1305::BLOCK_LEN];
-
-
+    
+    
     pub fn new(key: &[u8]) -> Self {
         assert_eq!(Self::KEY_LEN, Poly1305::KEY_LEN);
         assert_eq!(key.len(), Self::KEY_LEN);
@@ -85,6 +85,9 @@ impl Chacha20Poly1305 {
         debug_assert!(plen <= Self::P_MAX);
         debug_assert!(tlen == Self::TAG_LEN);
 
+        // NOTE: 初始 BlockCounter = 1;
+        self.chacha20.encrypt_slice(1, &nonce, plaintext_and_ciphertext);
+
         let mut poly1305 = {
             let mut keystream = [0u8; Self::BLOCK_LEN];
             // NOTE: 初始 BlockCounter = 0;
@@ -94,9 +97,6 @@ impl Chacha20Poly1305 {
 
             Poly1305::new(&poly1305_key[..])
         };
-        
-        // NOTE: 初始 BlockCounter = 1;
-        self.chacha20.encrypt_slice(1, &nonce, plaintext_and_ciphertext);
 
         poly1305.update(aad);
         // padding AAD
