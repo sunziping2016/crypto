@@ -291,6 +291,7 @@ const fn sub_byte(x: u8) -> u8 {
     FORWARD_S_BOX[x as usize]
 }
 
+#[allow(dead_code)]
 #[inline]
 fn rot_word(x: u32) -> u32 {
     // RotWord([b0, b1, b2, b3]) = [b1, b2, b3, b0]
@@ -298,6 +299,7 @@ fn rot_word(x: u32) -> u32 {
     u32::from_le_bytes([b, c, d, a])
 }
 
+#[allow(dead_code)]
 #[inline]
 fn sub_word(x: u32) -> u32 {
     // SubWord([b0, b1, b2, b3]) = [ SubByte(b0), SubByte(b1), SubByte(b2), SubByte(b3) ]
