@@ -222,103 +222,46 @@ macro_rules! impl_block_cipher_with_cfb1_mode {
 
             pub fn encrypt_slice(&self, iv: &[u8; Self::IV_LEN], segments: &mut [u8]) {
                 debug_assert_eq!(iv.len(), Self::IV_LEN);
-                if segments.is_empty() {
-                    return ();
-                }
 
-                let mut last_input_block = iv.clone();
+                #[allow(unused_assignments)]
                 let mut last_segment = false;
-                
-                // First 8 data segment ( 1 byte )
-                let mut output_block = last_input_block.clone();
-                self.cipher.encrypt(&mut output_block);
-                let mut first_byte = Bits(segments[0]);
+                let mut last_input_block = iv.clone();
 
-                first_byte.bit_xor(0, output_block[0]);
-                last_segment = first_byte.bit(0);
+                for i in 0..segments.len() {
+                    for bit_pos in 0..8 {
+                        let mut keystream = last_input_block.clone();
+                        self.cipher.encrypt(&mut keystream);
 
-                segments[0] = first_byte.0;
-                for i in 1..8 {
-                    left_shift_1(&mut last_input_block, last_segment);
+                        let mut byte_bits = Bits(segments[i]);
+                        byte_bits.bit_xor(bit_pos, keystream[0]);
+                        last_segment = byte_bits.bit(bit_pos);
+                        segments[i] = byte_bits.0;
 
-                    let mut output_block = last_input_block.clone();
-                    self.cipher.encrypt(&mut output_block);
-                    let mut byte = Bits(segments[0]);
-
-                    byte.bit_xor(i, output_block[0]);
-                    last_segment = byte.bit(i);
-                    segments[0] = byte.0;
-                }
-
-                if segments.len() == 1 {
-                    return ();
-                }
-
-                let data = &mut segments[1..];
-                for byte in data.iter_mut() {
-                    for i in 0..8 {
+                        // left shift 1 bits
                         left_shift_1(&mut last_input_block, last_segment);
-
-                        let mut output_block = last_input_block.clone();
-                        self.cipher.encrypt(&mut output_block);
-
-                        let mut bits = Bits(*byte);
-
-                        bits.bit_xor(i, output_block[0]);
-                        last_segment = bits.bit(i);
-                        *byte = bits.0;
                     }
                 }
             }
 
             pub fn decrypt_slice(&self, iv: &[u8; Self::IV_LEN], segments: &mut [u8]) {
                 debug_assert_eq!(iv.len(), Self::IV_LEN);
-                if segments.is_empty() {
-                    return ();
-                }
 
-                let mut last_input_block = iv.clone();
+                #[allow(unused_assignments)]
                 let mut last_segment = false;
-                
-                // First 8 data segment ( 1 byte )
-                let mut output_block = last_input_block.clone();
-                self.cipher.encrypt(&mut output_block);
-                let mut first_byte = Bits(segments[0]);
+                let mut last_input_block = iv.clone();
 
-                last_segment = first_byte.bit(0);
+                for i in 0..segments.len() {
+                    for bit_pos in 0..8 {
+                        let mut keystream = last_input_block.clone();
+                        self.cipher.encrypt(&mut keystream);
 
-                first_byte.bit_xor(0, output_block[0]);
-                segments[0] = first_byte.0;
+                        let mut byte_bits = Bits(segments[i]);
+                        last_segment = byte_bits.bit(bit_pos);
+                        byte_bits.bit_xor(bit_pos, keystream[0]);
+                        segments[i] = byte_bits.0;
 
-                for i in 1..8 {
-                    left_shift_1(&mut last_input_block, last_segment);
-
-                    let mut output_block = last_input_block.clone();
-                    self.cipher.encrypt(&mut output_block);
-                    let mut byte = Bits(segments[0]);
-                    last_segment = byte.bit(i);
-
-                    byte.bit_xor(i, output_block[0]);
-                    segments[0] = byte.0;
-                }
-
-                if segments.len() == 1 {
-                    return ();
-                }
-                
-                let data = &mut segments[1..];
-                for byte in data.iter_mut() {
-                    for i in 0..8 {
+                        // left shift 1 bits
                         left_shift_1(&mut last_input_block, last_segment);
-
-                        let mut output_block = last_input_block.clone();
-                        self.cipher.encrypt(&mut output_block);
-
-                        let mut bits = Bits(*byte);
-                        last_segment = bits.bit(i);
-
-                        bits.bit_xor(i, output_block[0]);
-                        *byte = bits.0;
                     }
                 }
             }
@@ -364,65 +307,45 @@ macro_rules! impl_block_cipher_with_cfb8_mode {
             
             pub fn encrypt_slice(&self, iv: &[u8; Self::IV_LEN], segments: &mut [u8]) {
                 debug_assert_eq!(iv.len(), Self::IV_LEN);
-                if segments.is_empty() {
-                    return ();
-                }
 
-                let mut last_input_block = iv.clone();
+                #[allow(unused_assignments)]
                 let mut last_segment = 0u8;
+                let mut last_input_block = iv.clone();
 
-                // First data segment
-                let mut output_block = last_input_block.clone();
-                self.cipher.encrypt(&mut output_block);
-                segments[0] ^= output_block[0];
-                last_segment = segments[0];
+                for i in 0..segments.len() {
+                    let mut keystream = last_input_block.clone();
+                    self.cipher.encrypt(&mut keystream);
 
-                if segments.len() == 1 {
-                    return ();
-                }
+                    segments[i] ^= keystream[0];
+                    last_segment = segments[i];
 
-                for segment in &mut segments[1..].iter_mut() {
+                    // left shift 8 bits
                     let mut tmp = [0u8; Self::BLOCK_LEN];
                     tmp[0..Self::BLOCK_LEN - 1].copy_from_slice(&last_input_block[1..]);
                     tmp[Self::BLOCK_LEN - 1] = last_segment;
                     last_input_block = tmp;
-
-                    let mut output_block = last_input_block.clone();
-                    self.cipher.encrypt(&mut output_block);
-                    *segment ^= output_block[0];
-                    last_segment = *segment;
                 }
             }
 
             pub fn decrypt_slice(&self, iv: &[u8; Self::IV_LEN], segments: &mut [u8]) {
                 debug_assert_eq!(iv.len(), Self::IV_LEN);
-                if segments.is_empty() {
-                    return ();
-                }
 
-                let mut last_input_block = iv.clone();
+                #[allow(unused_assignments)]
                 let mut last_segment = 0u8;
+                let mut last_input_block = iv.clone();
 
-                // First data segment
-                last_segment = segments[0];
-                let mut output_block = last_input_block.clone();
-                self.cipher.encrypt(&mut output_block);
-                segments[0] ^= output_block[0];
+                for i in 0..segments.len() {
+                    let mut keystream = last_input_block.clone();
+                    self.cipher.encrypt(&mut keystream);
 
-                if segments.len() == 1 {
-                    return ();
-                }
+                    last_segment = segments[i];
+                    segments[i] ^= keystream[0];
 
-                for segment in &mut segments[1..].iter_mut() {
+                    // left shift 8 bits
                     let mut tmp = [0u8; Self::BLOCK_LEN];
                     tmp[0..Self::BLOCK_LEN - 1].copy_from_slice(&last_input_block[1..]);
                     tmp[Self::BLOCK_LEN - 1] = last_segment;
                     last_input_block = tmp;
-
-                    last_segment = *segment;
-                    let mut output_block = last_input_block.clone();
-                    self.cipher.encrypt(&mut output_block);
-                    *segment ^= output_block[0];
                 }
             }
         }
@@ -488,13 +411,10 @@ macro_rules! impl_block_cipher_with_cfb128_mode {
 
                 for segment in segments.chunks_mut(Self::BLOCK_LEN) {
                     let mut output_block = last_input_block.clone();
-                    for i in 0..segment.len() {
-                        last_input_block[i] = segment[i];
-                    }
-
                     self.cipher.encrypt(&mut output_block);
 
                     for i in 0..segment.len() {
+                        last_input_block[i] = segment[i];
                         segment[i] ^= output_block[i];
                     }
                 }
