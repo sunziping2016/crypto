@@ -31,14 +31,11 @@ impl Rc4Md5 {
     pub const MIN_KEY_LEN: usize =   1;        // In bytes
     pub const MAX_KEY_LEN: usize = usize::MAX;
     
-    pub const N_MIN: usize = 1;
-    pub const N_MAX: usize = usize::MAX;
-
-
-    pub fn new(key: &[u8], nonce: &[u8]) -> Self {
+    
+    pub fn new(key: &[u8], salt: &[u8]) -> Self {
         let mut m = Md5::new();
         m.update(key);
-        m.update(nonce);
+        m.update(salt);
 
         let key = m.finalize();
 

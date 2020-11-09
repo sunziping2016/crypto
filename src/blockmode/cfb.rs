@@ -515,38 +515,38 @@ impl_block_cipher_with_cfb1_mode!(Aria192Cfb1, Aria192);
 impl_block_cipher_with_cfb1_mode!(Aria256Cfb1, Aria256);
 
 
-impl_block_cipher_with_cfb1_mode!(Sm4Cfb8, Sm4);
+impl_block_cipher_with_cfb8_mode!(Sm4Cfb8, Sm4);
 impl_block_cipher_with_cfb8_mode!(Aes128Cfb8, Aes128);
 impl_block_cipher_with_cfb8_mode!(Aes192Cfb8, Aes192);
 impl_block_cipher_with_cfb8_mode!(Aes256Cfb8, Aes256);
 impl_block_cipher_with_cfb8_mode!(Camellia128Cfb8, Camellia128);
 impl_block_cipher_with_cfb8_mode!(Camellia192Cfb8, Camellia192);
 impl_block_cipher_with_cfb8_mode!(Camellia256Cfb8, Camellia256);
-impl_block_cipher_with_cfb1_mode!(Aria128Cfb8, Aria128);
-impl_block_cipher_with_cfb1_mode!(Aria192Cfb8, Aria192);
-impl_block_cipher_with_cfb1_mode!(Aria256Cfb8, Aria256);
+impl_block_cipher_with_cfb8_mode!(Aria128Cfb8, Aria128);
+impl_block_cipher_with_cfb8_mode!(Aria192Cfb8, Aria192);
+impl_block_cipher_with_cfb8_mode!(Aria256Cfb8, Aria256);
 
-impl_block_cipher_with_cfb1_mode!(Sm4Cfb64, Sm4);
+impl_block_cipher_with_cfb64_mode!(Sm4Cfb64, Sm4);
 impl_block_cipher_with_cfb64_mode!(Aes128Cfb64, Aes128);
 impl_block_cipher_with_cfb64_mode!(Aes192Cfb64, Aes192);
 impl_block_cipher_with_cfb64_mode!(Aes256Cfb64, Aes256);
 impl_block_cipher_with_cfb64_mode!(Camellia128Cfb64, Camellia128);
 impl_block_cipher_with_cfb64_mode!(Camellia192Cfb64, Camellia192);
 impl_block_cipher_with_cfb64_mode!(Camellia256Cfb64, Camellia256);
-impl_block_cipher_with_cfb1_mode!(Aria128Cfb64, Aria128);
-impl_block_cipher_with_cfb1_mode!(Aria192Cfb64, Aria192);
-impl_block_cipher_with_cfb1_mode!(Aria256Cfb64, Aria256);
+impl_block_cipher_with_cfb64_mode!(Aria128Cfb64, Aria128);
+impl_block_cipher_with_cfb64_mode!(Aria192Cfb64, Aria192);
+impl_block_cipher_with_cfb64_mode!(Aria256Cfb64, Aria256);
 
-impl_block_cipher_with_cfb1_mode!(Sm4Cfb128, Sm4);
+impl_block_cipher_with_cfb128_mode!(Sm4Cfb128, Sm4);
 impl_block_cipher_with_cfb128_mode!(Aes128Cfb128, Aes128);
 impl_block_cipher_with_cfb128_mode!(Aes192Cfb128, Aes192);
 impl_block_cipher_with_cfb128_mode!(Aes256Cfb128, Aes256);
 impl_block_cipher_with_cfb128_mode!(Camellia128Cfb128, Camellia128);
 impl_block_cipher_with_cfb128_mode!(Camellia192Cfb128, Camellia192);
 impl_block_cipher_with_cfb128_mode!(Camellia256Cfb128, Camellia256);
-impl_block_cipher_with_cfb1_mode!(Aria128Cfb128, Aria128);
-impl_block_cipher_with_cfb1_mode!(Aria192Cfb128, Aria192);
-impl_block_cipher_with_cfb1_mode!(Aria256Cfb128, Aria256);
+impl_block_cipher_with_cfb128_mode!(Aria128Cfb128, Aria128);
+impl_block_cipher_with_cfb128_mode!(Aria192Cfb128, Aria192);
+impl_block_cipher_with_cfb128_mode!(Aria256Cfb128, Aria256);
 
 
 #[cfg(test)]
