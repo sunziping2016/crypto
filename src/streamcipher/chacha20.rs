@@ -98,7 +98,7 @@ impl Chacha20 {
     }
 
     #[inline]
-    fn in_place(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], plaintext_or_ciphertext: &mut [u8]) {
+    fn in_place(&self, init_block_counter: u32, nonce: &[u8], plaintext_or_ciphertext: &mut [u8]) {
         debug_assert_eq!(nonce.len(), Self::NONCE_LEN);
 
         let mut initial_state = self.initial_state.clone();
@@ -109,9 +109,7 @@ impl Chacha20 {
         // Nonce (96-bits, little-endian)
         if cfg!(target_endian = "little") {
             unsafe {
-                use core::mem::transmute;
-
-                let data: &[u32; 3] = transmute(nonce);
+                let data: &[u32] = std::slice::from_raw_parts(nonce.as_ptr() as *const u32, nonce.len() / core::mem::size_of::<u32>());
                 initial_state[13..16].copy_from_slice(data);
             }
         } else {
@@ -177,13 +175,13 @@ impl Chacha20 {
 
     /// Nonce (96-bits, little-endian)
     #[inline]
-    pub fn encrypt_slice(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], plaintext_in_ciphertext_out: &mut [u8]) {
+    pub fn encrypt_slice(&self, init_block_counter: u32, nonce: &[u8], plaintext_in_ciphertext_out: &mut [u8]) {
         self.in_place(init_block_counter, nonce, plaintext_in_ciphertext_out)
     }
 
     /// Nonce (96-bits, little-endian)
     #[inline]
-    pub fn decrypt_slice(&self, init_block_counter: u32, nonce: &[u8; Self::NONCE_LEN], ciphertext_in_plaintext_and: &mut [u8]) {
+    pub fn decrypt_slice(&self, init_block_counter: u32, nonce: &[u8], ciphertext_in_plaintext_and: &mut [u8]) {
         self.in_place(init_block_counter, nonce, ciphertext_in_plaintext_and)
     }
 }

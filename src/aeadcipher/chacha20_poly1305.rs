@@ -56,7 +56,7 @@ impl Chacha20Poly1305 {
         Self { chacha20 }
     }
     
-    pub fn encrypt_slice(&self, nonce: &[u8; Self::NONCE_LEN], aad: &[u8], aead_pkt: &mut [u8]) {
+    pub fn encrypt_slice(&self, nonce: &[u8], aad: &[u8], aead_pkt: &mut [u8]) {
         debug_assert!(aead_pkt.len() >= Self::TAG_LEN);
 
         let plen = aead_pkt.len() - Self::TAG_LEN;
@@ -65,7 +65,7 @@ impl Chacha20Poly1305 {
         self.encrypt_slice_detached(nonce, aad, plaintext_and_ciphertext, tag_out)
     }
 
-    pub fn decrypt_slice(&self, nonce: &[u8; Self::NONCE_LEN], aad: &[u8], aead_pkt: &mut [u8]) -> bool {
+    pub fn decrypt_slice(&self, nonce: &[u8], aad: &[u8], aead_pkt: &mut [u8]) -> bool {
         debug_assert!(aead_pkt.len() >= Self::TAG_LEN);
 
         let clen = aead_pkt.len() - Self::TAG_LEN;
@@ -74,7 +74,7 @@ impl Chacha20Poly1305 {
         self.decrypt_slice_detached(nonce, aad, ciphertext_and_plaintext, &tag_in)
     }
 
-    pub fn encrypt_slice_detached(&self, nonce: &[u8; Self::NONCE_LEN], aad: &[u8], plaintext_and_ciphertext: &mut [u8], tag_out: &mut [u8]) {
+    pub fn encrypt_slice_detached(&self, nonce: &[u8], aad: &[u8], plaintext_and_ciphertext: &mut [u8], tag_out: &mut [u8]) {
         debug_assert_eq!(nonce.len(), Self::NONCE_LEN);
 
         let alen = aad.len();
@@ -120,7 +120,7 @@ impl Chacha20Poly1305 {
         tag_out.copy_from_slice(&tag[..Self::TAG_LEN]);
     }
 
-    pub fn decrypt_slice_detached(&self, nonce: &[u8; Self::NONCE_LEN], aad: &[u8], ciphertext_and_plaintext: &mut [u8], tag_in: &[u8]) -> bool {
+    pub fn decrypt_slice_detached(&self, nonce: &[u8], aad: &[u8], ciphertext_and_plaintext: &mut [u8], tag_in: &[u8]) -> bool {
         debug_assert_eq!(nonce.len(), Self::NONCE_LEN);
 
         let alen = aad.len();
